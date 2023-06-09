@@ -1,0 +1,105 @@
+Introduction to Course Project
+==============================
+First load and clean data as per assignment need (remove NA and adjust format)
+```{r echo=TRUE}
+setwd("~/")
+activity <- unzip("activity.zip")
+data <- read.csv("activity.csv")
+#adjust the date format 
+data$date <- as.Date(data$date)
+#remove NA from the data set
+data <- na.omit(data)
+
+```
+
+Q:1 Histogram of total number of steps taken each day
+```{r echo=TRUE}
+#count the total number of steps taken per day
+Stepsperday <- data %>% group_by(date) %>% summarise(TotalSteps = sum(steps))
+
+#make a histogram of total number of steps taken each day
+hist(Stepsperday$TotalSteps, xlab = "Total number of Steps per day", ylab = "Step Counts", main = "Total number of Steps taken each day", col =6)
+
+```
+
+Q:2 Mean and Median number of steps taken each day
+```{r echo=TRUE}
+#count the mean steps per day
+meansteps <- mean(Stepsperday$TotalSteps)
+print(meansteps)
+
+#count median steps per day
+mediansteps <- median(Stepsperday$TotalSteps)
+print(mediansteps)
+```
+
+Q:3 Time series plot of the average number of steps taken
+```{r echo=TRUE}
+#mean steps taken per interval
+five_average <- data %>% group_by(interval) %>% summarise(AverageSteps = mean(steps))
+
+#Make time series plot
+plot(five_average$interval, five_average$AverageSteps, type = "l", xlab = "Interval", ylab = "Average steps taken during 5 minute interval")
+```
+
+Q:4 The 5-minute interval that, on average, contains the maximum number of steps
+```{r echo=TRUE}
+#calculate the maximum number of steps taken in 5-minute interval
+maxstep_interval <- five_average$interval[which.max(five_average$AverageSteps)]
+```
+
+Q:5 COde to describe and show a strategy for imputing missing data
+```{r echo=TRUE}
+#find the missing values and replace it with average value
+filldata <- data
+for (i in 1:nrow(filldata)) {
+  if (is.na(filldata$steps[i])){
+    index <- which(filldata$interval[i] == five_average$interval)
+    filldata$steps[i] <- five_average[index, ]$AverageSteps
+  }
+  
+}
+filldata$date <- as.Date(filldata$date)
+```
+
+Q:6 Histogram of the total number of steps taken each day after missing values are imputed
+```{r echo=TRUE}
+fillstepsperday <- filldata %>% group_by(date) %>% summarise(TotalSteps = sum(steps))
+ 
+#draw histogram for steps taken each day
+hist(fillstepsperday$TotalSteps, xlab = "Total number of steps taken each day", ylab = "Count", main = "Histogram of total number of steps taken each day", col =6)
+```
+
+Now count the mean total number and median total number of steps per day 
+
+```{r echo=TRUE}
+#mean steps per day
+fillmeansteps <- mean(fillstepsperday$TotalSteps)
+
+#median steps per day
+fillmediansteps <- median(fillstepsperday$TotalSteps)
+
+```
+
+Q:7 Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends.
+```{r echo=TRUE}
+#first make weekday as variable
+filldata$date <- weekdays(filldata$date)
+
+#Now label all days as weekdays
+filldata$daytype <- "weekday"
+
+#adjust saturday and sunday as weekends
+filldata$daytype[filldata$day %in% c("Saturday", "Sunday")] <- "Weekend"
+
+#Calculate average weekday steps and average weekend steps taken
+dayaverage <- filldata %>% group_by(daytype, interval) %>% summarise(AverageSteps = mean(steps))
+```
+Line plot showing average number of steps taken on weekdays vs on weekends 
+
+```{r echo=TRUE}
+library(ggplot2)
+qplot(interval, AverageSteps, data = dayaverage, type = "L", geom = "line", xlab = "Interval", ylab = "Average Number of Steps taken", main = "Average steps taken on Weekends vs weekdays", facets = daytype ~.,)
+
+```
+
